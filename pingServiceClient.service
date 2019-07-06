@@ -5,10 +5,10 @@ After=network-online.target
 
 [Service]
 Type=simple
-Restart=on-failure
+Restart=always
 User=pi
 WorkingDirectory=/home/pi
-ExecStart=/home/pi/ping.sh
+ExecStart=/usr/bin/python3 -u pingServiceClient.py
 
 [Install]
 WantedBy=multi-user.target
