@@ -44,7 +44,7 @@ def sendLog(data, message, event_id, id):
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, rc):
     print("Client subscribed!")
-    client.subscribe("+/event/+", qos=1)
+    client.subscribe("+/event/+")
 
 
 # The callback for when a PUBLISH message is received from the server.
@@ -58,17 +58,11 @@ def on_message(client, userdata, msg):
         sendLog((msg.payload).decode('utf-8'), "Room name changed", 4, str(msg.topic[:15]))
     elif(str(msg.topic[-5:]) == "state"):
         sendLog((msg.payload).decode('utf-8'), "ESP state", 5, str(msg.topic[:15]))
+    elif(str(msg.topic[-5:]) == "onoff"):
+        sendLog((msg.payload).decode('utf-8'), "Room on/off", 6, str(msg.topic[:15]))
 
 
-        
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
-
-client.connect("127.0.0.1", 1883)
-
-client.loop_start()
 
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
@@ -113,6 +107,14 @@ myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
 myAWSIoTMQTTClient.connect()
 myAWSIoTMQTTClient.subscribe("pl19/notification", 1, customCallback)
 print(" * Ping subscribed!")
+
+
+myAWSIoTMQTTClient2 = None
+myAWSIoTMQTTClient2 = AWSIoTMQTTClient("localAWSLog")
+myAWSIoTMQTTClient2.configureEndpoint("localhost", 1883)
+
+myAWSIoTMQTTClient2.connect()
+myAWSIoTMQTTClient2.subscribe("+/event/+", 1, on_message)
 
 
 time.sleep(2)
