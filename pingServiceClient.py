@@ -1,4 +1,5 @@
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+import paho.mqtt.client as mqtt
 import logging
 import time
 import json
@@ -21,13 +22,62 @@ def replyToPing(sequence):
 
     print(' * Ping answered!')
 
+def sendLog(data, message, event_id, id):
+    pingData = {}
+
+    pingData['id'] = id
+    pingData['value'] = data
+    pingData['message'] = message
+
+    message = {}
+    message['device_mac'] = "D4:25:8B:D9:E7:2F"
+    message['timestamp'] = str(datetime.datetime.now())
+    message['event_id'] = event_id
+    message['event'] = pingData
+    messageJson = json.dumps(message)
+    print("sending log: ")
+    print(messageJson)
+    myAWSIoTMQTTClient.publishAsync("pl19/event", messageJson, 1)
+
+
+
+# The callback for when the client receives a CONNACK response from the server.
+def on_connect(client, userdata, rc):
+    print("Client subscribed!")
+    client.subscribe("+/event/+", qos=1)
+
+
+# The callback for when a PUBLISH message is received from the server.
+def on_message(client, userdata, msg):
+    print("message received!")    
+    if(str(msg.topic[-6:]) == "status"):
+        sendLog((msg.payload).decode('utf-8'), "Status changed", 2, str(msg.topic[:15]))
+    elif(str(msg.topic[-7:]) == "status"):
+        sendLog((msg.payload).decode('utf-8'), "Desired temp changed", 3, str(msg.topic[:15]))
+    elif(str(msg.topic[-7:]) == "setname"):
+        sendLog((msg.payload).decode('utf-8'), "Room name changed", 4, str(msg.topic[:15]))
+    elif(str(msg.topic[-5:]) == "state"):
+        sendLog((msg.payload).decode('utf-8'), "ESP state", 5, str(msg.topic[:15]))
+
+
+        
+
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+
+client.connect("127.0.0.1", 1883)
+
+
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
-    print("* Received ping!")
     messageContent = json.loads(message.payload.decode('utf-8'))
     messageData = messageContent['event']
     if messageContent['event_id'] == 0:
+        print("* Received ping!")
         replyToPing(messageData['sequence'])
+    else:
+        print(json.dumps(messageData))
 
 
 
@@ -63,6 +113,8 @@ myAWSIoTMQTTClient.connect()
 myAWSIoTMQTTClient.subscribe("pl19/notification", 1, customCallback)
 print(" * Ping subscribed!")
 
+
 time.sleep(2)
+
 while True:
     time.sleep(5)
