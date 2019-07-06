@@ -68,6 +68,7 @@ client.on_message = on_message
 
 client.connect("127.0.0.1", 1883)
 
+client.loop_start()
 
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
